@@ -23,9 +23,9 @@ import Register from "views/pages/examples/Register.js";
 import Products from "views/pages/managers/products/Products.js";
 import Orders from "views/pages/managers/orders/Orders.js";
 import OrderDetails from "views/pages/managers/orders/OrderDetails";
-import Timeline from "views/pages/examples/Timeline.js";
+// import Timeline from "views/pages/examples/Timeline.js";
 import Vector from "views/pages/maps/Vector.js";
-import Widgets from "views/pages/Widgets.js";
+// import Widgets from "views/pages/Widgets.js";
 import EditProduct from "views/pages/managers/products/EditProduct";
 import AddProduct from "views/pages/managers/products/AddProduct";
 import Chat from "views/pages/consultants/Chat";
@@ -33,6 +33,11 @@ import Blogs from "views/pages/blogs/Blogs";
 import BlogDetail from "views/pages/blogs/BlogDetail";
 import AddBlog from "views/pages/blogs/AddBlog";
 import QrScanner from "views/pages/qrscanner/QrScanner";
+// import Sales from "views/pages/sales/Sales";
+import Salers from "views/pages/dashboards/sales/Salers";
+import SaleDetails from "views/pages/dashboards/sales/SaleDetails";
+import AddOrder from "views/pages/managers/orders/AddOrders";
+import EditOrders from "views/pages/managers/orders/EditOrders";
 
 const routes = [
   {
@@ -44,18 +49,39 @@ const routes = [
     views: [
       {
         path: "/dashboard",
-        name: "Dashboard",
+        name: "Manager",
         miniName: "D",
         component: Dashboard,
         layout: "/admin",
       },
-      // {
-      //   path: "/alternative-dashboard",
-      //   name: "Alternative",
-      //   miniName: "A",
-      //   component: Alternative,
-      //   layout: "/admin",
-      // },
+      {
+        path: "/alternative-dashboard",
+        name: "Alternative",
+        miniName: "A",
+        component: Alternative,
+        layout: "/admin",
+      },
+      {
+        collapse: true,
+        path: "/sale-dashboard",
+        name: "Saler",
+        miniName: "S",
+        layout: "/admin",
+        views: [
+          {
+            path: "/list-sales/:saleId",
+            name: "Salers Dashboard",
+            component: Salers,
+            layout: "/admin"
+          },
+          {
+            path: "/saler-details/:saleId",
+            name: "Saler Details",
+            component: SaleDetails,
+            layout: "/admin",
+          }
+        ]
+      },
     ],
   },
   {
@@ -243,36 +269,55 @@ const routes = [
             path: "/order-details/:orderId",
             name: "Orders Details",
             component: OrderDetails,
+            layout: "/admin",
+          },
+          {
+            path: "/add-order",
+            name: "Add Orders",
+            component: AddOrder,
             layout: "/admin"
-          }
+          },
+          {
+            path: "/edit-order/:orderId",
+            name: "Edit Details",
+            component: EditOrders,
+            layout: "/admin",
+          },
         ]
       },
       {
-        collapse: true,
+        // collapse: true,
         path: "/products",
         name: "Products",
         miniName: "P",
         layout: "/admin",
-        views: [
-          {
-            path: "/list-products",
-            name: "All Products",
-            component: Products,
-            layout: "/admin",
-          },
-          {
-            path: "/edit-product/:productId",
-            name: "Edit Product",
-            component: EditProduct,
-            layout: "/admin",
-          },
-          {
-            path: "/add-product",
-            name: "Add Product",
-            component: AddProduct,
-            layout: "/admin",
-          },
-        ],
+        component: Products,
+      },
+      {
+        path: "/list-products",
+        name: "All Products",
+        component: Products,
+        layout: "/admin",
+        hidden: true, // Exclude this route from navigation
+        hideName: true
+      },
+      {
+        path: "/edit-product/:productId",
+        name: "Edit Product",
+        component: EditProduct,
+        layout: "/admin",
+        hidden: true, // Exclude this route from navigation
+        hideName: true
+
+      },
+      {
+        path: "/add-product",
+        // name: "Add Product",
+        component: AddProduct,
+        layout: "/admin",
+        hidden: true, // Exclude this route from navigation
+        hideName: true
+
       },
      
       {
@@ -311,6 +356,13 @@ const routes = [
   //   name: "Widgets",
   //   icon: "ni ni-archive-2 text-green",
   //   component: Widgets,
+  //   layout: "/admin",
+  // },
+  // {
+  //   path: "/list-sale",
+  //   name: "Sales",
+  //   icon: "ni ni-camera-compact text-info",
+  //   component: Sales,
   //   layout: "/admin",
   // },
   {

@@ -81,7 +81,7 @@ function Sidebar({ toggleSidenav, sidenavOpen, routes, logo, rtlActive }) {
   // this function creates the links and collapses that appear in the sidebar (left menu)
   const createLinks = (routes) => {
     return routes.map((props, key) => {
-      if (props.redirect) {
+      if (props.redirect || props.hideName) {
         return null;
       }
       if (props.collapse) {
@@ -127,29 +127,37 @@ function Sidebar({ toggleSidenav, sidenavOpen, routes, logo, rtlActive }) {
           </NavItem>
         );
       }
+      if (props.hideName) {
+        // Render a placeholder element
+        return <div key={key} />;
+      }
       return (
         <NavItem className={activeRoute(props.layout + props.path)} key={key}>
-          <NavLink
-            to={props.layout + props.path}
-            activeClassName=""
-            onClick={closeSidenav}
-            tag={NavLinkRRD}
-          >
-            {props.icon !== undefined ? (
-              <>
-                <i className={props.icon} />
-                <span className="nav-link-text">{props.name}</span>
-              </>
-            ) : props.miniName !== undefined ? (
-              <>
-                <span className="sidenav-mini-icon"> {props.miniName} </span>
-                <span className="sidenav-normal"> {props.name} </span>
-              </>
-            ) : (
-              props.name
-            )}
-          </NavLink>
-        </NavItem>
+         <NavLink
+          to={props.layout + props.path}
+          activeClassName=""
+          onClick={closeSidenav}
+          tag={NavLinkRRD}
+        >
+          {props.hideName ? null : (
+            <>
+              {props.icon !== undefined ? (
+                <>
+                  <i className={props.icon} />
+                  <span className="nav-link-text">{props.name}</span>
+                </>
+              ) : props.miniName !== undefined ? (
+                <>
+                  <span className="sidenav-mini-icon"> {props.miniName} </span>
+                  <span className="sidenav-normal"> {props.name} </span>
+                </>
+              ) : (
+                props.name
+              )}
+            </>
+          )}
+        </NavLink>
+      </NavItem>
       );
     });
   };

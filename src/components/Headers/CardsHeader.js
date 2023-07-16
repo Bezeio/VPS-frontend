@@ -30,7 +30,7 @@ const  CardsHeader = ({ name, parentName }) => {
   })
   const fetchRevenueData = async() =>{
     try {
-      const response = await axios.get("https://localhost:7050/api/Customer/list");
+      const response = await axios.get("https://localhost:7050/api/OrderDetail/totalprice");
       setRevenueData(response.data);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -46,7 +46,7 @@ const  CardsHeader = ({ name, parentName }) => {
   };
   const fetchOrderData = async() =>{
     try {
-      const response = await axios.get("https://localhost:7050/api/Blog/total");
+      const response = await axios.get("https://localhost:7050/api/Order/total");
       setOrderData(response.data);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -122,11 +122,11 @@ const  CardsHeader = ({ name, parentName }) => {
                         >
                           Tổng doanh thu
                         </CardTitle>
-                        <span className="h2 font-weight-bold mb-0">49,65%</span>
+                        <span className="h2 font-weight-bold mb-0">{revenueData}</span>
                       </div>
                       <Col className="col-auto">
                         <div className="icon icon-shape bg-gradient-primary text-white rounded-circle shadow">
-                          <i className="ni ni-chart-bar-32" />
+                        <i class="fa-solid fa-dollar-sign"></i>
                         </div>
                       </Col>
                     </Row>
@@ -155,7 +155,7 @@ const  CardsHeader = ({ name, parentName }) => {
                       </div>
                       <Col className="col-auto">
                         <div className="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
-                          <i className="ni ni-chart-pie-35" />
+                          <i className="ni ni-single-02" />
                         </div>
                       </Col>
                     </Row>
@@ -179,11 +179,11 @@ const  CardsHeader = ({ name, parentName }) => {
                         >
                           Số lượng đơn hàng
                         </CardTitle>
-                        <span className="h2 font-weight-bold mb-0">924</span>
+                        <span className="h2 font-weight-bold mb-0">{orderData}</span>
                       </div>
                       <Col className="col-auto">
                         <div className="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
-                          <i className="ni ni-money-coins" />
+                          <i className="ni ni-collection" />
                         </div>
                       </Col>
                     </Row>
@@ -205,7 +205,7 @@ const  CardsHeader = ({ name, parentName }) => {
                           tag="h5"
                           className="text-uppercase text-muted mb-0"
                         >
-                          Tổng số lượt bài đăng
+                          Tổng số bài đăng
                         </CardTitle>
                         <span className="h2 font-weight-bold mb-0">
                           {blogData}

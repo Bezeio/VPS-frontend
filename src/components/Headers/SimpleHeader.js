@@ -42,7 +42,7 @@ function TimelineHeader({ name, parentName }) {
                   </BreadcrumbItem>
                 </Breadcrumb>
               </Col>
-              <Col className="mt-3 mt-md-0 text-md-right" lg="6" xs="5">
+              {/* <Col className="mt-3 mt-md-0 text-md-right" lg="6" xs="5">
                 <Button className="btn-neutral" color="default" size="sm">
                   <Link to="/admin/products/add-product">
                     New
@@ -52,7 +52,7 @@ function TimelineHeader({ name, parentName }) {
                 <Button className="btn-neutral" color="default" size="sm">
                   Filters
                 </Button>
-              </Col>
+              </Col> */}
             </Row>
           </div>
         </Container>

@@ -18,10 +18,15 @@ import {
   Col,
   UncontrolledTooltip,
   Badge,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
 } from "reactstrap";
 // core components
 import SimpleHeader from "components/Headers/SimpleHeader.js";
 import axios from "axios";
+import NotificationAlert from "react-notification-alert";
 
 const pagination = paginationFactory({
   page: 1,
@@ -51,13 +56,51 @@ const pagination = paginationFactory({
   ),
 });
 
-
 const { SearchBar } = Search;
 
 const Accounts = () => {
   const [alert, setAlert] = useState(null);
   const componentRef = useRef(null);
   const [data, setData] = useState([]);
+  const notificationAlertRef = React.useRef(null);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
+
+  const notifySuccess = () => {
+    let options = {
+      place: "tc",
+      message: (
+        <div className="alert-text">
+          <span className="alert-title" data-notify="title">
+            {" "}
+            Xóa tài khoản thành công
+          </span>
+        </div>
+      ),
+      type: "success",
+      icon: "ni ni-bell-55",
+      autoDismiss: 7,
+    };
+    notificationAlertRef.current.notificationAlert(options);
+  };
+  const notifyDanger = () => {
+    let options = {
+      place: "tc",
+      message: (
+        <div className="alert-text">
+          <span className="alert-title" data-notify="title">
+            {" "}
+            Xóa tài khoản thất bại!
+          </span>
+          <span data-notify="message">Vui lòng kiểm tra lại đường truyền</span>
+        </div>
+      ),
+      type: "danger",
+      icon: "ni ni-bell-55",
+      autoDismiss: 7,
+    };
+    notificationAlertRef.current.notificationAlert(options);
+  };
 
   // this function will copy to clipboard an entire table,
   // so you can paste it inside an excel or csv file
@@ -97,22 +140,61 @@ const Accounts = () => {
       </ReactBSAlert>
     );
   };
-  useEffect(()=>{
-    fetchData()
-  },[])
-  const fetchData = async() =>{
+  useEffect(() => {
+    fetchData();
+  }, []);
+  const fetchData = async () => {
     try {
-      const response = await axios.get("https://localhost:7050/api/Customer/list");
+      const response = await axios.get(
+        "https://localhost:7050/api/Customer/list"
+      );
       setData(response.data);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
-  
+  const deleteData = async () => {
+    if (selectedAccountId) {
+      try {
+        await axios.delete(
+          `https://localhost:7050/api/Customer/${selectedAccountId}`
+        );
+        notifySuccess();
+        fetchData();
+        toggleDeleteModal();
+      } catch (error) {
+        notifyDanger();
+        console.error("Error deleting data:", error);
+      }
+    }
+  };
+
+  const toggleDeleteModal = () => {
+    setDeleteModal(!deleteModal);
+  };
+
+  const confirmDelete = (accountId) => {
+    setSelectedAccountId(accountId);
+    toggleDeleteModal();
+  };
+
   return (
     <>
       {alert}
-      <SimpleHeader name="React Tables" parentName="Tables" />
+      <NotificationAlert ref={notificationAlertRef} />
+      <Modal isOpen={deleteModal} toggle={toggleDeleteModal}>
+        <ModalHeader toggle={toggleDeleteModal}>Confirmation</ModalHeader>
+        <ModalBody>Bạn có chắc muốn xóa tài khoản này</ModalBody>
+        <ModalFooter>
+          <Button color="danger" onClick={deleteData}>
+            Có
+          </Button>{" "}
+          <Button color="secondary" onClick={toggleDeleteModal}>
+            Không
+          </Button>
+        </ModalFooter>
+      </Modal>
+      <SimpleHeader name="Accounts" parentName="Manager" />
       <Container className="mt--6" fluid>
         <Row>
           <div className="col">
@@ -128,9 +210,9 @@ const Accounts = () => {
                     dataField: "customerId",
                     text: "Id",
                     sort: true,
-                    formatter: (cell) =>{
-                      return `# ${cell}`
-                    }
+                    formatter: (cell) => {
+                      return `# ${cell}`;
+                    },
                   },
                   {
                     dataField: "fullName",
@@ -156,9 +238,9 @@ const Accounts = () => {
                     dataField: "balance",
                     text: "Số dư",
                     sort: true,
-                    formatter: (cell) =>{
-                      return `${cell} VND`
-                    }
+                    formatter: (cell) => {
+                      return `${cell} VND`;
+                    },
                   },
                   {
                     dataField: "status",
@@ -166,15 +248,32 @@ const Accounts = () => {
                     sort: true,
                     formatter: (cell, row) => {
                       return row.status ? (
-                          <Badge color="" className="badge-dot mr-4">
-                            <i className="bg-success" />
-                            <span className="status">active</span>
-                          </Badge>
-                      ) : <Badge color="" className="badge-dot mr-4">
-                      <i className="bg-warning" />
-                      <span className="status">inactive</span>
-                    </Badge>;
+                        <Badge color="" className="badge-dot mr-4">
+                          <i className="bg-success" />
+                          <span className="status">active</span>
+                        </Badge>
+                      ) : (
+                        <Badge color="" className="badge-dot mr-4">
+                          <i className="bg-warning" />
+                          <span className="status">inactive</span>
+                        </Badge>
+                      );
                     },
+                  },
+                  {
+                    dataField: "actions",
+                    text: "Hành động",
+                    formatter: (cell, row) => (
+                      <div>
+                        <Button
+                          color="danger"
+                          size="sm"
+                          onClick={() => confirmDelete(row.customerId)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    ),
                   },
                 ]}
                 search
@@ -261,6 +360,6 @@ const Accounts = () => {
       </Container>
     </>
   );
-}
+};
 
 export default Accounts;

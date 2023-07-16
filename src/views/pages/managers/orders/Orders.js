@@ -18,24 +18,36 @@ import {
   Table,
   Container,
   Row,
+  Col,
+  Button,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
 } from "reactstrap";
 // core components
 import SimpleHeader from "components/Headers/SimpleHeader.js";
 import axios from "axios";
 import { Link } from "react-router-dom/cjs/react-router-dom.min";
+import NotificationAlert from "react-notification-alert";
 
 const Order = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortedColumn, setSortedColumn] = useState("");
+  const [sortedDirection, setSortedDirection] = useState("");
+  const itemsPerPage = 5;
+
   const thirdListRef = useRef(null);
   const [data, setData] = useState([]);
-  useEffect(() => {
-    fetchData();
-  }, []);
 
-  useEffect(() => {
-    if (data.length > 0) {
-      initializeList();
-    }
-  }, [data]);
+  const totalPages = Math.ceil(data.length / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const displayedData = data.slice(startIndex, endIndex);
+  const notificationAlertRef = React.useRef(null);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -45,41 +57,218 @@ const Order = () => {
       console.error("Error fetching data:", error);
     }
   };
+  useEffect(() => {
+    if (data.length > 0) {
+      initializeList();
+    }
+    const totalPages = Math.ceil(data.length / itemsPerPage);
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [data, currentPage]);
 
   const initializeList = () => {
     new List(thirdListRef.current, {
-      valueNames: ["date", "status", "customer", "product", "price"],
+      valueNames: ["date", "status", "customer", "address", "price"],
       listClass: "list",
     });
   };
+  useEffect(() => {
+    if (data.length > 0) {
+      initializeList();
+    }
+  }, [data]);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const deleteData = async () => {
+    if (selectedOrderId) {
+      try {
+        await axios.delete(
+          `https://localhost:7050/api/Order/${selectedOrderId}`
+        );
+        notifySuccess();
+        fetchData();
+        toggleDeleteModal();
+      } catch (error) {
+        notifyDanger();
+        console.error("Error deleting data:", error);
+      }
+    }
+  };
+
+  const handleSort = (column) => {
+    let direction = "asc";
+    if (column === sortedColumn && sortedDirection === "asc") {
+      direction = "desc";
+    }
+    setSortedColumn(column);
+    setSortedDirection(direction);
+    sortData(column, direction);
+    setCurrentPage(1); // Reset current page when sorting
+  };
+
+  const notifySuccess = () => {
+    let options = {
+      place: "tc",
+      message: (
+        <div className="alert-text">
+          <span className="alert-title" data-notify="title">
+            {" "}
+            Xóa đơn hàng thành công
+          </span>
+        </div>
+      ),
+      type: "success",
+      icon: "ni ni-bell-55",
+      autoDismiss: 7,
+    };
+    notificationAlertRef.current.notificationAlert(options);
+  };
+  const notifyDanger = () => {
+    let options = {
+      place: "tc",
+      message: (
+        <div className="alert-text">
+          <span className="alert-title" data-notify="title">
+            {" "}
+            Xóa đơn hàng thất bại!
+          </span>
+          <span data-notify="message"> Vui lòng kiểm tra lại đường truyền</span>
+        </div>
+      ),
+      type: "danger",
+      icon: "ni ni-bell-55",
+      autoDismiss: 7,
+    };
+    notificationAlertRef.current.notificationAlert(options);
+  };
+
+  const sortData = (column, direction) => {
+    const sortedData = [...data];
+    sortedData.sort((a, b) => {
+      const valueA = getValueByColumn(a, column);
+      const valueB = getValueByColumn(b, column);
+      if (valueA < valueB) {
+        return direction === "asc" ? -1 : 1;
+      }
+      if (valueA > valueB) {
+        return direction === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+    setData(sortedData);
+  };
+  const toggleDeleteModal = () => {
+    setDeleteModal(!deleteModal);
+  };
+
+  const confirmDelete = (orderId) => {
+    setSelectedOrderId(orderId);
+    toggleDeleteModal();
+  };
+
+  const getValueByColumn = (item, column) => {
+    switch (column) {
+      case "date":
+        return item.orderDate;
+      case "status":
+        return item.status;
+      case "customer":
+        return item.customer.fullName;
+      case "address":
+        return item.customer.address;
+      case "price":
+        return item.price;
+      default:
+        return "";
+    }
+  };
+
   return (
     <>
-      <SimpleHeader name="Sortable Tables" parentName="Tables" />
+      <NotificationAlert ref={notificationAlertRef} />
+      <Modal isOpen={deleteModal} toggle={toggleDeleteModal}>
+        <ModalHeader toggle={toggleDeleteModal}>Confirmation</ModalHeader>
+        <ModalBody>Bạn có chắc muốn xóa đơn hàng này</ModalBody>
+        <ModalFooter>
+          <Button color="danger" onClick={deleteData}>
+            Có
+          </Button>{" "}
+          <Button color="secondary" onClick={toggleDeleteModal}>
+            Không
+          </Button>
+        </ModalFooter>
+      </Modal>
+      <SimpleHeader name="Orders" parentName="Manager" />
       <Container className="mt--6" fluid>
         <Row>
           <div className="col">
             <Card className="bg-default shadow">
+              <Col className="mt-3 mt-md-0 text-md-right" lg="6" xs="5">
+                <Button className="btn-neutral" color="default" size="sm">
+                  <Link
+                    className="text-shadow"
+                    key={currentPage}
+                    to="/admin/add-order"
+                  >
+                    New
+                  </Link>
+                </Button>
+                <Button className="btn-neutral" color="default" size="sm">
+                  Filters
+                </Button>
+              </Col>
               <CardHeader className="bg-transparent border-0">
                 <h3 className="text-white mb-0">Danh sách đặt hàng</h3>
               </CardHeader>
               <div className="table-responsive" ref={thirdListRef}>
-                <Table className="align-items-center table-dark table-flush">
+                <Table
+                  id="myTable"
+                  className="align-items-center table-dark table-flush"
+                >
                   <thead className="thead-dark">
                     <tr>
                       <th>Id</th>
-                      <th className="sort" data-sort="date" scope="col">
+                      <th
+                        className="sort"
+                        data-sort="date"
+                        scope="col"
+                        onClick={() => handleSort("date")}
+                      >
                         Ngày đặt hàng
                       </th>
-                      <th className="sort" data-sort="status" scope="col">
+                      <th
+                        className="sort"
+                        data-sort="status"
+                        scope="col"
+                        onClick={() => handleSort("status")}
+                      >
                         Tình trạng
                       </th>
-                      <th className="sort" data-sort="customer" scope="col">
+                      <th
+                        className="sort"
+                        data-sort="customer"
+                        scope="col"
+                        onClick={() => handleSort("customer")}
+                      >
                         Khách hàng
                       </th>
-                      <th className="sort" data-sort="product" scope="col">
-                        Sản phẩm
+                      <th
+                        className="sort"
+                        data-sort="address"
+                        scope="col"
+                        onClick={() => handleSort("address")}
+                      >
+                        Địa chỉ
                       </th>
-                      <th className="sort" data-sort="price" scope="col">
+                      <th
+                        className="sort"
+                        data-sort="price"
+                        scope="col"
+                        onClick={() => handleSort("price")}
+                      >
                         Giá
                       </th>
 
@@ -87,14 +276,31 @@ const Order = () => {
                     </tr>
                   </thead>
                   <tbody className="list">
-                    {data.map((order) => (
+                    {displayedData.map((order) => (
                       <tr key={order.orderId}>
-                        <td className="price">#{order.orderId}</td>
-                        <td className="date">{order.orderDate}</td>
+                        <td className="id">#{order.orderId}</td>
+                        <td className="date">
+                          {new Date(order.orderDate).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "2-digit",
+                              day: "2-digit",
+                              year: "numeric",
+                            }
+                          )}
+                        </td>
                         <td>
                           <Badge color="" className="badge-dot mr-4">
-                            <i className="bg-warning" />
-                            <span className="status">pending</span>
+                            <i
+                              className={
+                                order.status === 1 ? "bg-warning" : "bg-yellow"
+                              }
+                            />
+                            <span className="status">
+                              {order.status === 1
+                                ? "Đang xử lý"
+                                : "Đang vận chuyển"}
+                            </span>
                           </Badge>
                         </td>
                         <th scope="row">
@@ -111,13 +317,13 @@ const Order = () => {
                             </a>
                             <Media>
                               <span className="customer mb-0 text-sm">
-                                Argon Design System
+                                {order.customer.fullName}
                               </span>
                             </Media>
                           </Media>
                         </th>
-                        <td className="product">Máy ảnh</td>
-                        <td className="price">{order.price} USD</td>
+                        <td className="product">{order.customer.address}</td>
+                        <td className="price">{order.price} VND</td>
 
                         <td className="text-right">
                           <UncontrolledDropdown>
@@ -130,334 +336,53 @@ const Order = () => {
                               <i className="fas fa-ellipsis-v" />
                             </DropdownToggle>
                             <DropdownMenu className="dropdown-menu-arrow" right>
-                              <Link to={`/admin/order-details/${order.orderId}`}>
-                                <DropdownItem>
-                                  View
-                                </DropdownItem>
+                              <Link
+                                to={`/admin/order-details/${order.orderId}`}
+                              >
+                                <DropdownItem>View</DropdownItem>
                               </Link>
                               <DropdownItem
-                                href="#pablo"
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => confirmDelete(order.orderId)}
                               >
-                                Another action
+                                Delete
                               </DropdownItem>
-                              <DropdownItem
-                                href="#pablo"
-                                onClick={(e) => e.preventDefault()}
-                              >
-                                Something else here
-                              </DropdownItem>
+                              <Link to={`/admin/edit-order/${order.orderId}`}>
+                                <DropdownItem>Edit</DropdownItem>
+                              </Link>
                             </DropdownMenu>
                           </UncontrolledDropdown>
                         </td>
                       </tr>
                     ))}
-                    {/* <tr>
-                      <td className="price">#13</td>
-                      <td className="date">1 Dec, 10:20 </td>
-                      <td>
-                        <Badge color="" className="badge-dot mr-4">
-                          <i className="bg-warning" />
-                          <span className="status">pending</span>
-                        </Badge>
-                      </td>
-                      <th scope="row">
-                        <Media className="align-items-center">
-                          <a
-                            className="avatar rounded-circle mr-3"
-                            href="#pablo"
-                            onClick={(e) => e.preventDefault()}
-                          >
-                            <img
-                              alt="..."
-                              src={require("assets/img/theme/angular.jpg")}
-                            />
-                          </a>
-                          <Media>
-                            <span className="name mb-0 text-sm">
-                              Angular Now UI Kit PRO
-                            </span>
-                          </Media>
-                        </Media>
-                      </th>
-                      <td className="product">PS4</td>
-                      <td className="price">$1800 USD</td>
-
-                      <td className="text-right">
-                        <UncontrolledDropdown>
-                          <DropdownToggle
-                            className="btn-icon-only text-light"
-                            color=""
-                            role="button"
-                            size="sm"
-                          >
-                            <i className="fas fa-ellipsis-v" />
-                          </DropdownToggle>
-                          <DropdownMenu className="dropdown-menu-arrow" right>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Action
-                            </DropdownItem>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Another action
-                            </DropdownItem>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Something else here
-                            </DropdownItem>
-                          </DropdownMenu>
-                        </UncontrolledDropdown>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="price">#14</td>
-                      <td className="date">14 Nov, 10:20 </td>
-                      <td>
-                        <Badge color="" className="badge-dot mr-4">
-                          <i className="bg-danger" />
-                          <span className="status">delayed</span>
-                        </Badge>
-                      </td>
-                      <th scope="row">
-                        <Media className="align-items-center">
-                          <a
-                            className="avatar rounded-circle mr-3"
-                            href="#pablo"
-                            onClick={(e) => e.preventDefault()}
-                          >
-                            <img
-                              alt="..."
-                              src={require("assets/img/theme/sketch.jpg")}
-                            />
-                          </a>
-                          <Media>
-                            <span className="name mb-0 text-sm">
-                              Black Dashboard
-                            </span>
-                          </Media>
-                        </Media>
-                      </th>
-                      <td className="product">Loa</td>
-                      <td className="budget">$3150 USD</td>
-
-                      <td className="text-right">
-                        <UncontrolledDropdown>
-                          <DropdownToggle
-                            className="btn-icon-only text-light"
-                            color=""
-                            role="button"
-                            size="sm"
-                          >
-                            <i className="fas fa-ellipsis-v" />
-                          </DropdownToggle>
-                          <DropdownMenu className="dropdown-menu-arrow" right>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Action
-                            </DropdownItem>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Another action
-                            </DropdownItem>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Something else here
-                            </DropdownItem>
-                          </DropdownMenu>
-                        </UncontrolledDropdown>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="price">#10</td>
-                      <td className="date">1 Sep, 10:20 </td>
-                      <td>
-                        <Badge color="" className="badge-dot mr-4">
-                          <i className="bg-info" />
-                          <span className="status">on schedule</span>
-                        </Badge>
-                      </td>
-                      <th scope="row">
-                        <Media className="align-items-center">
-                          <a
-                            className="avatar rounded-circle mr-3"
-                            href="#pablo"
-                            onClick={(e) => e.preventDefault()}
-                          >
-                            <img
-                              alt="..."
-                              src={require("assets/img/theme/react.jpg")}
-                            />
-                          </a>
-                          <Media>
-                            <span className="name mb-0 text-sm">
-                              React Material Dashboard
-                            </span>
-                          </Media>
-                        </Media>
-                      </th>
-                      <td className="product">Flycam</td>
-                      <td className="price">$4400 USD</td>
-                      
-                      <td className="text-right">
-                        <UncontrolledDropdown>
-                          <DropdownToggle
-                            className="btn-icon-only text-light"
-                            color=""
-                            role="button"
-                            size="sm"
-                          >
-                            <i className="fas fa-ellipsis-v" />
-                          </DropdownToggle>
-                          <DropdownMenu className="dropdown-menu-arrow" right>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Action
-                            </DropdownItem>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Another action
-                            </DropdownItem>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Something else here
-                            </DropdownItem>
-                          </DropdownMenu>
-                        </UncontrolledDropdown>
-                      </td>
-                    </tr>
-                    <tr>
-                    <td className="price">#20</td>
-                      <td className="date">1 Jan, 10:20 </td>
-                      <td>
-                        <Badge color="" className="badge-dot mr-4">
-                          <i className="bg-success" />
-                          <span className="status">completed</span>
-                        </Badge>
-                      </td>
-                      <th scope="row">
-                        <Media className="align-items-center">
-                          <a
-                            className="avatar rounded-circle mr-3"
-                            href="#pablo"
-                            onClick={(e) => e.preventDefault()}
-                          >
-                            <img
-                              alt="..."
-                              src={require("assets/img/theme/vue.jpg")}
-                            />
-                          </a>
-                          <Media>
-                            <span className="name mb-0 text-sm">
-                              Vue Paper UI Kit PRO
-                            </span>
-                          </Media>
-                        </Media>
-                      </th>
-                      <td className="product">Laptop</td>
-                      <td className="price">$2200 USD</td>                   
-                      <td className="text-right">
-                        <UncontrolledDropdown>
-                          <DropdownToggle
-                            className="btn-icon-only text-light"
-                            color=""
-                            role="button"
-                            size="sm"
-                          >
-                            <i className="fas fa-ellipsis-v" />
-                          </DropdownToggle>
-                          <DropdownMenu className="dropdown-menu-arrow" right>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Action
-                            </DropdownItem>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Another action
-                            </DropdownItem>
-                            <DropdownItem
-                              href="#pablo"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              Something else here
-                            </DropdownItem>
-                          </DropdownMenu>
-                        </UncontrolledDropdown>
-                      </td>
-                    </tr> */}
                   </tbody>
                 </Table>
               </div>
               <CardFooter className="py-4">
                 <nav aria-label="...">
-                  <Pagination
-                    className="pagination justify-content-end mb-0"
-                    listClassName="justify-content-end mb-0"
-                  >
-                    <PaginationItem className="disabled">
+                  <Pagination className="pagination justify-content-end mb-0">
+                    <PaginationItem disabled={currentPage === 1}>
                       <PaginationLink
-                        href="#pablo"
-                        onClick={(e) => e.preventDefault()}
-                        tabIndex="-1"
-                      >
-                        <i className="fas fa-angle-left" />
-                        <span className="sr-only">Previous</span>
-                      </PaginationLink>
+                        previous
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                      />
                     </PaginationItem>
-                    <PaginationItem className="active">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <PaginationItem
+                          key={page}
+                          active={currentPage === page}
+                        >
+                          <PaginationLink onClick={() => setCurrentPage(page)}>
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )
+                    )}
+                    <PaginationItem disabled={currentPage === totalPages}>
                       <PaginationLink
-                        href="#pablo"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        1
-                      </PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink
-                        href="#pablo"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        2 <span className="sr-only">(current)</span>
-                      </PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink
-                        href="#pablo"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        3
-                      </PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink
-                        href="#pablo"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        <i className="fas fa-angle-right" />
-                        <span className="sr-only">Next</span>
-                      </PaginationLink>
+                        next
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                      />
                     </PaginationItem>
                   </Pagination>
                 </nav>

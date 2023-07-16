@@ -18,6 +18,8 @@ import {
   Row,
   Col,
   Button,
+  ListGroup,
+  ListGroupItem,
 } from "reactstrap";
 // core components
 // import ProfileHeader from "components/Headers/ProfileHeader.js";
@@ -25,8 +27,7 @@ import "quill/dist/quill.snow.css"; // Import Quill styles
 import "dropzone/dist/dropzone.css";
 import ReactQuill from "react-quill";
 import ReactDatetime from "react-datetime";
-
-// import Dropzone from "dropzone";
+import Dropzone from "dropzone";
 
 const AddBlog = () => {
     const [startDate, setStartDate] = React.useState(null);
@@ -51,6 +52,34 @@ const AddBlog = () => {
     }
     return "";
   };
+
+  useEffect(() => {
+    // this variable is to delete the previous image from the dropzone state
+    // it is just to make the HTML DOM a bit better, and keep it light
+    let currentMultipleFile = undefined;
+    // multiple dropzone file - accepts any type of file
+    new Dropzone(document.getElementById("dropzone-multiple"), {
+      url: "https://example.com/upload",
+      thumbnailWidth: null,
+      thumbnailHeight: null,
+      previewsContainer: document.getElementsByClassName(
+        "dz-preview-multiple"
+      )[0],
+      previewTemplate: document.getElementsByClassName("dz-preview-multiple")[0]
+        .innerHTML,
+      maxFiles: null,
+      acceptedFiles: null,
+      init: function () {
+        this.on("addedfile", function (file) {
+          if (currentMultipleFile) {
+          }
+          currentMultipleFile = file;
+        });
+      },
+    });
+    document.getElementsByClassName("dz-preview-multiple")[0].innerHTML = "";
+  }, []);
+
   const handleReactDatetimeChange = (who, date) => {
     if (
       startDate &&
@@ -90,7 +119,7 @@ const AddBlog = () => {
               <Form>
                 <div className="pl-lg-4">
                   <Row>
-                    <Col lg="6">
+                    <Col lg="12">
                       <FormGroup>
                         <label
                           className="form-control-label"
@@ -198,10 +227,74 @@ const AddBlog = () => {
                   </Form>
                   </FormGroup>
                 </div>
-              </Form>
-              <Button className="ml-4 mt-4" color="primary" type="submit">
+                <div className="pl-lg-4">
+                    <label
+                      className="form-control-label mb-4"
+                      htmlFor="input-address"
+                    >
+                      Chọn ảnh
+                    </label>
+                    <div
+                      className="dropzone dropzone-multiple pl-lg-4"
+                      id="dropzone-multiple"
+                    >
+                      <div className="fallback">
+                        <div className="custom-file">
+                          <input
+                            className="custom-file-input"
+                            id="customFileUploadMultiple"
+                            multiple="multiple"
+                            type="file"
+                          />
+                          <label
+                            className="custom-file-label"
+                            htmlFor="customFileUploadMultiple"
+                          >
+                            Choose file
+                          </label>
+                        </div>
+                      </div>
+                      <ListGroup
+                        className=" dz-preview dz-preview-multiple list-group-lg"
+                        flush
+                      >
+                        <ListGroupItem className=" px-0">
+                          <Row className=" align-items-center">
+                            <Col className=" col-auto">
+                              <div className=" avatar">
+                                <img
+                                  alt="..."
+                                  className=" avatar-img rounded"
+                                  data-dz-thumbnail
+                                />
+                              </div>
+                            </Col>
+                            <div className=" col ml--3">
+                              <h4 className=" mb-1" data-dz-name>
+                                ...
+                              </h4>
+                              <p
+                                className=" small text-muted mb-0"
+                                data-dz-size
+                              >
+                                ...
+                              </p>
+                            </div>
+                            <Col className=" col-auto">
+                              <Button size="sm" color="danger" data-dz-remove>
+                                <i className="fas fa-trash" />
+                              </Button>
+                            </Col>
+                          </Row>
+                        </ListGroupItem>
+                      </ListGroup>
+                    </div>
+                  </div>
+                  <Button className="ml-4 mt-4" color="primary" type="submit">
                 LƯU BÀI VIẾT
               </Button>
+              </Form>
+              
             </CardBody>
           </Card>
         </Col>

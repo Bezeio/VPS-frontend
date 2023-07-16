@@ -2,6 +2,7 @@ import axios from "axios";
 import classnames from "classnames";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom/cjs/react-router-dom.min";
+import { useHistory } from "react-router-dom";
 // reactstrap components
 import {
   ButtonGroup,
@@ -11,7 +12,7 @@ import {
   CardBody,
   ListGroupItem,
   ListGroup,
-  CardImg,
+  // CardImg,
   // CardTitle,
   FormGroup,
   Form,
@@ -27,37 +28,110 @@ import {
 // import ProfileHeader from "components/Headers/ProfileHeader.js";
 
 import Select2 from "react-select2-wrapper";
-import TagsInput from "components/TagsInput/TagsInput.js";
+// import TagsInput from "components/TagsInput/TagsInput.js";
 import ReactQuill from "react-quill";
 import Dropzone from "dropzone";
 import Slider from "nouislider";
+import NotificationAlert from "react-notification-alert";
 
 Dropzone.autoDiscover = false;
 
 const EditProduct = () => {
+  const history = useHistory();
   const [reactQuillText, setReactQuillText] = useState("");
-
   const { productId } = useParams();
   const [productData, setProductData] = useState([]);
+  const [categoryData, setCategoryData] = useState([]);
+  const [statusData, setStatusData] = useState([]);
   const [sliderValue, setSliderValue] = React.useState("0");
-  const [radios, setRadios] = React.useState(null);
-
+  // const [radios, setRadios] = React.useState(null);
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [isFormSubmitted, setIsFormSubmitted] = useState(false); // New state variable
+  const notificationAlertRef = React.useRef(null);
   const sliderRef = React.useRef(null);
+
+  const notifySuccess = () => {
+    let options = {
+      place: "tc",
+      message: (
+        <div className="alert-text">
+          <span className="alert-title" data-notify="title">
+            {" "}
+            Chỉnh sửa sản phẩm thành công
+          </span>
+        </div>
+      ),
+      type: "success",
+      icon: "ni ni-bell-55",
+      autoDismiss: 7,
+    };
+    notificationAlertRef.current.notificationAlert(options);
+  };
+
+  const notifyDanger = () => {
+    let options = {
+      place: "tc",
+      message: (
+        <div className="alert-text">
+          <span className="alert-title" data-notify="title">
+            {" "}
+            Chỉnh sửa sản phẩm thất bại
+          </span>
+          <span data-notify="message">
+            Vui lòng kiểm tra các trường đã điền
+          </span>
+        </div>
+      ),
+      type: "danger",
+      icon: "ni ni-bell-55",
+      autoDismiss: 7,
+    };
+    notificationAlertRef.current.notificationAlert(options);
+  };
+
   useEffect(() => {
-    Slider.create(sliderRef.current, {
-      start: [0],
-      connect: [true, false],
-      step: 1,
-      range: { min: 0, max: 100 },
-    }).on("update", function (values, handle) {
-      setSliderValue(values[0]);
-    });
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(
+          `https://localhost:7050/api/Product/${productId}`
+        );
+        setProductData(response.data);
+        setSliderValue(response.data.quality);
+        console.log(response.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
+  }, [productId]);
+
+  useEffect(() => {
+    if (sliderRef.current) {
+      const slider = Slider.create(sliderRef.current, {
+        start: [sliderValue],
+        connect: [true, false],
+        step: 1,
+        range: { min: 0, max: 10 },
+      });
+
+      slider.on("update", function (values, handle) {
+        setSliderValue(values[0]);
+      });
+
+      return () => {
+        slider.destroy(); // Cleanup the slider on component unmount
+      };
+    }
     // this variable is to delete the previous image from the dropzone state
     // it is just to make the HTML DOM a bit better, and keep it light
+  }, [sliderValue]);
+
+  useEffect(() => {
     let currentMultipleFile = undefined;
     // multiple dropzone file - accepts any type of file
     new Dropzone(document.getElementById("dropzone-multiple"), {
-      url: "https://",
+      url: "https://example.com/upload",
       thumbnailWidth: null,
       thumbnailHeight: null,
       previewsContainer: document.getElementsByClassName(
@@ -79,19 +153,36 @@ const EditProduct = () => {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCategoryData = async () => {
       try {
         const response = await axios.get(
-          `https://localhost:7050/api/Product/${productId}`
+          `https://localhost:7050/api/Category/list`
         );
-        setProductData(response.data);
+        setCategoryData(response.data);
         console.log(response.data);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching category data:", error);
       }
     };
 
-    fetchData();
+    fetchCategoryData();
+  }, []);
+
+  useEffect(() => {
+    const fetchStatusData = async () => {
+      try {
+        const response = await axios.get(
+          `https://localhost:7050/api/Status/list`
+        );
+        const slicedData = response.data.slice(0, 4); // Get the first four values
+        setStatusData(slicedData);
+        console.log(slicedData);
+      } catch (error) {
+        console.error("Error fetching category data:", error);
+      }
+    };
+
+    fetchStatusData();
   }, []);
 
   useEffect(() => {
@@ -100,11 +191,55 @@ const EditProduct = () => {
     }
   }, [productData.description]);
 
+  const handleStatusSelection = (statusId) => {
+    setSelectedStatus(statusId);
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    // Perform validation
+    const productName = formData.get("name");
+    const brand = formData.get("brand");
+
+    if (!productName || !brand) {
+      setIsFormSubmitted(true);
+      return;
+    }
+
+    try {
+      const updatedProduct = {
+        productName,
+        brand,
+        categoryId: formData.get("category"),
+        unitPrice: formData.get("price"),
+        unitInStock: formData.get("unitInStock"),
+        statusId: selectedStatus,
+        description: reactQuillText,
+        quality: parseInt(sliderValue),
+      };
+
+      const response = await axios.put(
+        `https://localhost:7050/api/Product/${productId}`,
+        updatedProduct
+      );
+
+      console.log(response.data);
+      setIsFormSubmitted(false);
+      notifySuccess();
+      history.push("/admin/products");
+    } catch (error) {
+      notifyDanger();
+      console.error("Error updating product:", error);
+    }
+  };
   return (
     <>
+      <NotificationAlert ref={notificationAlertRef} />
       <Container className="mt--12" fluid>
-        <Row className="mt-4">
-          <Col className="order-xl-1 mt-4" xl="12">
+        <Row className="mt-4 ml-8">
+          <Col className="order-xl-1 mt-4" xl="10">
             <Card>
               <CardHeader>
                 <Row className="align-items-center">
@@ -114,13 +249,13 @@ const EditProduct = () => {
                 </Row>
               </CardHeader>
               <CardBody>
-                <Form>
+                <Form onSubmit={handleFormSubmit}>
                   <h6 className="heading-small text-muted mb-4">
                     Thông tin sản phẩm
                   </h6>
-                  <div className="pl-lg-4">
+                  <div className="pl-lg-4 ml-7">
                     <Row>
-                      <Col lg="6">
+                      <Col lg="5">
                         <FormGroup>
                           <label
                             className="form-control-label"
@@ -129,6 +264,7 @@ const EditProduct = () => {
                             Tên sản phẩm
                           </label>
                           <Input
+                            name="name"
                             defaultValue={productData.productName}
                             id="input-username"
                             placeholder="Name of product"
@@ -136,7 +272,26 @@ const EditProduct = () => {
                           />
                         </FormGroup>
                       </Col>
-                      <Col lg="6">
+                      <Col lg="5">
+                        <FormGroup>
+                          <label
+                            className="form-control-label"
+                            htmlFor="input-first-name"
+                          >
+                            Nhãn hiệu
+                          </label>
+                          <Input
+                            name="brand"
+                            defaultValue={productData.brand}
+                            id="input-first-name"
+                            placeholder="Brand"
+                            type="text"
+                          />
+                        </FormGroup>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col lg="10">
                         <FormGroup>
                           <label
                             className="form-control-label"
@@ -147,41 +302,26 @@ const EditProduct = () => {
                           <Card>
                             <Select2
                               className="form-control"
-                              defaultValue="1"
+                              name="category"
+                              defaultValue={
+                                productData.category
+                                  ? productData.category.categoryId
+                                  : ""
+                              }
                               options={{
                                 placeholder: "Select",
                               }}
-                              data={[
-                                { id: "1", text: "Alerts" },
-                                { id: "2", text: "Badges" },
-                                { id: "3", text: "Buttons" },
-                                { id: "4", text: "Cards" },
-                                { id: "5", text: "Forms" },
-                                { id: "6", text: "Modals" },
-                              ]}
+                              data={categoryData.map((category) => ({
+                                id: category.categoryId,
+                                text: category.categoryName,
+                              }))}
                             />
                           </Card>
                         </FormGroup>
                       </Col>
                     </Row>
                     <Row>
-                      <Col lg="6">
-                        <FormGroup>
-                          <label
-                            className="form-control-label"
-                            htmlFor="input-first-name"
-                          >
-                            Nhãn hiệu
-                          </label>
-                          <Input
-                            defaultValue={productData.brand}
-                            id="input-first-name"
-                            placeholder="Brand"
-                            type="text"
-                          />
-                        </FormGroup>
-                      </Col>
-                      <Col lg="6">
+                      <Col lg="5">
                         <FormGroup>
                           <label
                             className="form-control-label"
@@ -191,84 +331,69 @@ const EditProduct = () => {
                           </label>
                           <Input
                             defaultValue={productData.unitPrice}
+                            name="price"
                             id="input-last-name"
                             placeholder="VND"
-                            type="text"
+                            type="number"
+                          />
+                        </FormGroup>
+                      </Col>
+                      <Col lg="5">
+                        <FormGroup>
+                          <label
+                            className="form-control-label"
+                            htmlFor="input-last-name"
+                          >
+                            Số lượng
+                          </label>
+                          <Input
+                            defaultValue={productData.unitInStock}
+                            name="unitInStock"
+                            id="input-last-name"
+                            placeholder="Quantity"
+                            type="number"
                           />
                         </FormGroup>
                       </Col>
                     </Row>
                   </div>
-
                   <div className="pl-lg-4">
                     <label
-                      className="form-control-label mb-4"
+                      className="form-control-label mb-4 ml-7"
                       htmlFor="input-address"
                     >
                       Tình trạng sản phẩm
                     </label>
                     <div>
-                      <ButtonGroup
-                        className="btn-group-toggle btn-group-colors event-tag mb-4 ml-8"
-                        data-toggle="buttons"
-                      >
-                        <i className="ni business_briefcase-24 mr-2">
-                          Hoạt động
-                        </i>
-                        <Button
-                          className={classnames("bg-success mr-6", {
-                            active:
-                              radios === "bg-success" &&
-                              productData.status.statusName === "Hoạt Động",
-                          })}
-                          color=""
-                          type="button"
-                          onClick={() => setRadios("bg-success")}
-                        />
-                        <i className="ni business_briefcase-24 mr-2">
-                          Còn hàng
-                        </i>
-                        <Button
-                          className={classnames("bg-info mr-6", {
-                            active: radios === "bg-info",
-                          })}
-                          color=""
-                          type="button"
-                          onClick={() => setRadios("bg-info")}
-                        />
-                        <i className="ni business_briefcase-24 mr-2">
-                          Ngừng Hoạt Động
-                        </i>
-                        <Button
-                          className={classnames("bg-danger mr-6", {
-                            active: radios === "bg-danger",
-                          })}
-                          color=""
-                          type="button"
-                          onClick={() => setRadios("bg-danger")}
-                        />
-
-                        <i className="ni business_briefcase-24 mr-2">
-                          Hết Hàng
-                        </i>
-                        <Button
-                          className={classnames("bg-yellow mr-6", {
-                            active: radios === "bg-yellow",
-                          })}
-                          color=""
-                          type="button"
-                          onClick={() => setRadios("bg-yellow")}
-                        />
-                      </ButtonGroup>
+                      {statusData.map((status) => (
+                        <ButtonGroup
+                          key={status.statusId}
+                          className="btn-group-toggle btn-group-colors event-tag mb-4 ml-7"
+                          data-toggle="buttons"
+                        >
+                          <i className="ni business_briefcase-24 mr-2">
+                            {status.statusValue}
+                          </i>
+                          <Button
+                            className={classnames("bg-info", {
+                              active: status.statusId === selectedStatus,
+                            })}
+                            color=""
+                            type="button"
+                            onClick={() =>
+                              handleStatusSelection(status.statusId)
+                            }
+                          />
+                        </ButtonGroup>
+                      ))}
                     </div>
                   </div>
-
-                  <div className="pl-lg-4">
+                  <div className="pl-lg-4 mt-4">
                     <Row>
                       <Col md="12">
                         <FormGroup>
                           <label
-                            className="form-control-label"
+                            className="form-control-label "
                             htmlFor="input-address"
                           >
                             Đánh giá sản phẩm
@@ -288,7 +413,6 @@ const EditProduct = () => {
                     </Row>
                   </div>
                   <hr className="my-4" />
-
                   <h6 className="heading-small text-muted mb-4">
                     Giới thiệu sản phẩm
                   </h6>
@@ -321,72 +445,76 @@ const EditProduct = () => {
                       />
                     </FormGroup>
                   </div>
-                </Form>
-                <div className="pl-lg-4">
-                  <label
-                    className="form-control-label mb-4"
-                    htmlFor="input-address"
-                  >
-                    Chọn ảnh
-                  </label>
-                  <div
-                    className="dropzone dropzone-multiple pl-lg-4"
-                    id="dropzone-multiple"
-                  >
-                    <div className="fallback">
-                      <div className="custom-file">
-                        <input
-                          className="custom-file-input"
-                          id="customFileUploadMultiple"
-                          multiple="multiple"
-                          type="file"
-                        />
-                        <label
-                          className="custom-file-label"
-                          htmlFor="customFileUploadMultiple"
-                        >
-                          Choose file
-                        </label>
-                      </div>
-                    </div>
-                    <ListGroup
-                      className=" dz-preview dz-preview-multiple list-group-lg"
-                      flush
+                  <div className="pl-lg-4">
+                    <label
+                      className="form-control-label mb-4"
+                      htmlFor="input-address"
                     >
-                      <ListGroupItem className=" px-0">
-                        <Row className=" align-items-center">
-                          <Col className=" col-auto">
-                            <div className=" avatar">
-                              <img
-                                alt="..."
-                                className=" avatar-img rounded"
-                                data-dz-thumbnail
-                              />
+                      Chọn ảnh
+                    </label>
+                    <div
+                      className="dropzone dropzone-multiple pl-lg-4"
+                      id="dropzone-multiple"
+                    >
+                      <div className="fallback">
+                        <div className="custom-file">
+                          <input
+                            className="custom-file-input"
+                            id="customFileUploadMultiple"
+                            multiple="multiple"
+                            type="file"
+                          />
+                          <label
+                            className="custom-file-label"
+                            htmlFor="customFileUploadMultiple"
+                          >
+                            Choose file
+                          </label>
+                        </div>
+                      </div>
+                      <ListGroup
+                        className=" dz-preview dz-preview-multiple list-group-lg"
+                        flush
+                      >
+                        <ListGroupItem className=" px-0">
+                          <Row className=" align-items-center">
+                            <Col className=" col-auto">
+                              <div className=" avatar">
+                                <img
+                                  alt="..."
+                                  className=" avatar-img rounded"
+                                  data-dz-thumbnail
+                                />
+                              </div>
+                            </Col>
+                            <div className=" col ml--3">
+                              <h4 className=" mb-1" data-dz-name>
+                                ...
+                              </h4>
+                              <p
+                                className=" small text-muted mb-0"
+                                data-dz-size
+                              >
+                                ...
+                              </p>
                             </div>
-                          </Col>
-                          <div className=" col ml--3">
-                            <h4 className=" mb-1" data-dz-name>
-                              ...
-                            </h4>
-                            <p className=" small text-muted mb-0" data-dz-size>
-                              ...
-                            </p>
-                          </div>
-                          <Col className=" col-auto">
-                            <Button size="sm" color="danger" data-dz-remove>
-                              <i className="fas fa-trash" />
-                            </Button>
-                          </Col>
-                        </Row>
-                      </ListGroupItem>
-                    </ListGroup>
+                            <Col className=" col-auto">
+                              <Button size="sm" color="danger" data-dz-remove>
+                                <i className="fas fa-trash" />
+                              </Button>
+                            </Col>
+                          </Row>
+                        </ListGroupItem>
+                      </ListGroup>
+                    </div>
                   </div>
-                </div>
+                  <Button className="ml-4 mt-4" color="primary" type="submit">
+                    LƯU SẢN PHẨM
+                  </Button>{" "}
+                  {/* Move inside the form */}
+                </Form>
               </CardBody>
             </Card>
-            <Button className="ml-4 mt-4" color="primary" type="submit">
-              LƯU SẢN PHẨM
-            </Button>
           </Col>
         </Row>
       </Container>

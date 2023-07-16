@@ -261,15 +261,15 @@ function Notifications() {
                         <h6 className="modal-title" id="modal-title-default">
                           Type your modal title
                         </h6>
-                        <button
+                        {/* <button
                           aria-label="Close"
                           className="close"
                           data-dismiss="modal"
                           type="button"
                           onClick={() => setdefaultModal(false)}
-                        >
-                          <span aria-hidden={true}>×</span>
-                        </button>
+                        > */}
+                          {/* <span aria-hidden={true}>×</span> */}
+                        {/* </button> */}
                       </div>
                       <div className="modal-body">
                         <p>
@@ -324,7 +324,7 @@ function Notifications() {
                         >
                           Your attention is required
                         </h6>
-                        <button
+                        {/* <button
                           aria-label="Close"
                           className="close"
                           data-dismiss="modal"
@@ -332,7 +332,7 @@ function Notifications() {
                           onClick={() => setnotificationModal(false)}
                         >
                           <span aria-hidden={true}>×</span>
-                        </button>
+                        </button> */}
                       </div>
                       <div className="modal-body">
                         <div className="py-3 text-center">
